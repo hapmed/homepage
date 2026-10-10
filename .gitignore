@@ -1,0 +1,37 @@
+# Secretos
+contras.txt
+*.env
+.env
+.env.*
+
+# SSH / claves
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+
+# Dependencias / build (Node)
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
