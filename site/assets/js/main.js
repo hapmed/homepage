@@ -3,15 +3,17 @@
 // Configuración editable del contacto comercial.
 // Reemplazar por los datos reales cuando se confirmen. Los campos vacíos se ocultan.
 const HAPMED_CONFIG = {
-  contactEmail: "contacto@hapmed.example",
+  contactEmail: "h@hapmed.qzz.io",
   contactSecondaryLabel: "LinkedIn",
   contactSecondaryUrl: "",
 };
 
 (function () {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const header = document.querySelector(".site-header");
   const navToggle = document.querySelector(".nav-toggle");
   const primaryNav = document.getElementById("primary-nav");
+  const aurora = document.querySelector(".aurora");
 
   if (header) {
     const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 8);
@@ -42,9 +44,8 @@ const HAPMED_CONFIG = {
     });
   }
 
+  // Revelado con leve escalonado (stagger) por grupo.
   const reveals = document.querySelectorAll("[data-reveal]");
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
   if (reduceMotion || !("IntersectionObserver" in window)) {
     reveals.forEach((el) => el.classList.add("is-visible"));
   } else {
@@ -52,14 +53,34 @@ const HAPMED_CONFIG = {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
+            const el = entry.target;
+            const siblings = el.parentElement ? el.parentElement.querySelectorAll("[data-reveal]") : [el];
+            const index = Array.prototype.indexOf.call(siblings, el);
+            el.style.transitionDelay = Math.min(index, 4) * 90 + "ms";
+            el.classList.add("is-visible");
+            observer.unobserve(el);
           }
         });
       },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
+      { threshold: 0.15, rootMargin: "0px 0px -70px 0px" }
     );
     reveals.forEach((el) => observer.observe(el));
+  }
+
+  // Parallax muy sutil del fondo.
+  if (aurora && !reduceMotion) {
+    let ticking = false;
+    const update = () => {
+      aurora.style.transform = "translate3d(0," + Math.min(window.scrollY * 0.06, 120) + "px,0)";
+      ticking = false;
+    };
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!ticking) { window.requestAnimationFrame(update); ticking = true; }
+      },
+      { passive: true }
+    );
   }
 
   const yearEl = document.getElementById("year");
