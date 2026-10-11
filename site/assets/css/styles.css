@@ -220,8 +220,21 @@ p { margin: 0; }
   transform: rotate(-45deg);
 }
 .ticks strong { color: var(--ink); }
-.visual { border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow-soft); }
-.diagram { width: 100%; }
+.visual { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-soft); }
+.visual-img { width: 100%; height: auto; display: block; }
+
+/* Mascota: mono columpiándose */
+.mascot {
+  position: fixed;
+  left: 0;
+  top: 40%;
+  z-index: 60;
+  width: 150px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.mascot img { width: 100%; height: auto; }
 
 /* Contact */
 .contact-actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 34px; }

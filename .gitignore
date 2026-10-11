@@ -18,9 +18,12 @@ Desktop.ini
 # Logs
 *.log
 
-# Fuentes de marca (pesadas; los assets finales van en site/assets/brand)
+# Fuentes de marca e imagen (pesadas; los assets finales van en site/assets/)
 logo-hapmed.jfif
 logo-hapmed.png
+delsensoralsistema.jfif
+mono.jfif
+mono.png
 
 # Dependencias / build (Node)
 node_modules/

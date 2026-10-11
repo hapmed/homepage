@@ -4,8 +4,6 @@
 // Reemplazar por los datos reales cuando se confirmen. Los campos vacíos se ocultan.
 const HAPMED_CONFIG = {
   contactEmail: "h@hapmed.qzz.io",
-  contactSecondaryLabel: "LinkedIn",
-  contactSecondaryUrl: "",
 };
 
 (function () {
@@ -92,16 +90,37 @@ const HAPMED_CONFIG = {
     emailLink.textContent = HAPMED_CONFIG.contactEmail;
   }
 
-  const secondaryLink = document.getElementById("contact-secondary");
-  if (secondaryLink) {
-    if (HAPMED_CONFIG.contactSecondaryUrl) {
-      secondaryLink.href = HAPMED_CONFIG.contactSecondaryUrl;
-      secondaryLink.textContent = HAPMED_CONFIG.contactSecondaryLabel;
-      secondaryLink.hidden = false;
-      secondaryLink.rel = "noopener";
-      secondaryLink.target = "_blank";
-    } else {
-      secondaryLink.hidden = true;
-    }
+  // Mascota: el mono se columpia por la página a intervalos aleatorios.
+  const mascot = document.querySelector(".mascot");
+  if (mascot && !reduceMotion) {
+    let animating = false;
+
+    const swing = () => {
+      if (animating || document.hidden) { schedule(); return; }
+      animating = true;
+      const w = window.innerWidth;
+      const top = 12 + Math.random() * 38; // % desde arriba
+      mascot.style.top = top + "vh";
+      mascot.style.opacity = "1";
+
+      mascot.animate(
+        [
+          { transform: "translate3d(-190px, 0, 0) rotate(-24deg)", opacity: 0 },
+          { transform: "translate3d(" + (w / 2 - 70) + "px, -90px, 0) rotate(0deg)", opacity: 1, offset: 0.5 },
+          { transform: "translate3d(" + (w + 190) + "px, 0, 0) rotate(24deg)", opacity: 1 }
+        ],
+        { duration: 4600, easing: "ease-in-out" }
+      ).onfinish = () => {
+        mascot.style.opacity = "0";
+        animating = false;
+        schedule();
+      };
+    };
+
+    const schedule = () => {
+      window.setTimeout(swing, 6000 + Math.random() * 12000);
+    };
+
+    schedule();
   }
 })();
