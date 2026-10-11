@@ -1,0 +1,23 @@
+name: hapmed-web
+
+# Compose de PRODUCCION: usa una imagen ya publicada (no construye).
+# HAPMED_IMAGE y HAPMED_TAG los define deploy.sh a partir del commit.
+services:
+  web:
+    image: "${HAPMED_IMAGE}:${HAPMED_TAG}"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HAPMED_PORT:-8080}:8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

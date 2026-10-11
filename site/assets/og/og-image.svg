@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2e6bff"/>
+      <stop offset="1" stop-color="#00c2b8"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="80%" cy="10%" r="70%">
+      <stop offset="0" stop-color="#1b2340"/>
+      <stop offset="1" stop-color="#0b0c0e"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#g)" stroke-width="14" stroke-linecap="round">
+    <path d="M150 430V190M310 430V190M150 310h160"/>
+  </g>
+  <circle cx="310" cy="190" r="16" fill="url(#g)"/>
+  <text x="150" y="540" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="86" font-weight="700" fill="#ffffff" letter-spacing="6">HAPMED</text>
+  <text x="152" y="600" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="500" fill="#a7abb3" letter-spacing="1">Engineering what comes next.</text>
+</svg>

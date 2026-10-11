@@ -1,0 +1,26 @@
+# Control de versiones y CI
+.git
+.gitattributes
+.github
+.gitignore
+
+# Documentacion
+*.md
+
+# Secretos y fuentes de marca pesadas
+contras.txt
+logo-hapmed.png
+logo-hapmed.jfif
+
+# Archivos de orquestacion (no van dentro de la imagen)
+compose.yaml
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Editor y sistema operativo
+.vscode
+.idea
+*.log
+Thumbs.db
+.DS_Store
