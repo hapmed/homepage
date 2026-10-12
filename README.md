@@ -107,61 +107,47 @@ se afirma que el rollback esté probado hasta verificarlo en el servidor.)
 
 ## CI/CD (GitHub Actions)
 
-Flujo: `git push origin main` → **validar → construir → publicar en GHCR → desplegar por SSH → verificar**.
+Flujo: `git push origin main` → **validar → construir → publicar en GHCR → desplegar (runner self-hosted) → verificar**.
 Workflow: `.github/workflows/ci-cd.yml`.
 
 Etapas:
-1. **validate** — comprueba que existen los archivos necesarios, valida la estructura del sitio
-   (`tools/validate-site.js`) y el HTML (`html-validate`).
-2. **build** — construye la imagen con Buildx y la publica en GHCR **solo** en `push` (en PR no publica).
-3. **deploy** — solo en `push` a `main`: copia `deploy/deploy.sh` y `deploy/compose.prod.yaml` al
-   servidor y ejecuta el despliegue por SSH, con healthcheck y rollback.
+1. **validate** — comprueba archivos necesarios, valida la estructura (`tools/validate-site.js`) y el HTML (`html-validate`).
+2. **build** — construye la imagen con Buildx, la publica en GHCR **solo** en `push`, e inyecta `ASSET_VERSION=<sha>` (cache-busting).
+3. **deploy** — solo en `push` a `main`: corre en un **runner self-hosted** en el servidor, sincroniza
+   `deploy/deploy.sh` y `deploy/compose.prod.yaml` en `/opt/apps/hapmed-web` y despliega (healthcheck + rollback).
 
 Etiquetas de imagen: **el propio commit** (`type=sha,format=long`) más `main`. Nunca se depende de `latest`.
 
-### Secretos necesarios en GitHub
+### Despliegue con runner self-hosted
 
-Configurar en **Settings → Secrets and variables → Actions** (se recomienda en el entorno `production`):
+El servidor de producción es un **homelab detrás de NAT**, así que los runners hospedados de GitHub no pueden
+alcanzarlo por SSH. En su lugar, un **runner self-hosted** corre en el propio servidor y despliega localmente.
 
-| Secreto | Contenido | Obligatorio |
+Preparación (una vez, en el servidor):
+- Runner registrado en el repo con la etiqueta **`hapmed`**: `./config.sh --url https://github.com/hapmed/homepage --labels hapmed`.
+- Instalado como servicio systemd para arrancar al boot: `sudo ./svc.sh install <usuario> && sudo ./svc.sh start`.
+- El usuario del runner debe pertenecer al grupo `docker` y ser dueño de `/opt/apps/hapmed-web`.
+
+### Variables de GitHub
+
+| Variable | Valor | Uso |
 | --- | --- | --- |
-| `SSH_HOST` | Host o IP del servidor | Sí |
-| `SSH_USER` | Usuario de despliegue (no root) | Sí |
-| `SSH_KEY` | Clave privada SSH de despliegue (ed25519) | Sí |
-| `SSH_KNOWN_HOSTS` | Línea(s) de `known_hosts` del servidor | Sí |
-| `SSH_PORT` | Puerto SSH (por defecto `22`) | No |
-| `DEPLOY_PATH` | Directorio de producción en el servidor | Sí |
+| `ENABLE_DEPLOY` | `true` | Habilita el job de despliegue. Si no existe, solo valida y publica. |
 
-`GITHUB_TOKEN` lo usa el propio workflow para publicar en GHCR (`packages: write`); no hay que crearlo.
-
-El job de despliegue está condicionado a la variable de repositorio **`ENABLE_DEPLOY`** (Settings →
-Secrets and variables → Actions → Variables). Mientras no exista o no valga `true`, el workflow valida y
-publica en GHCR pero **no despliega** (así no falla por secretos ausentes). Para activar el despliegue:
-crear la variable `ENABLE_DEPLOY=true` y añadir los secretos SSH.
+`GITHUB_TOKEN` lo usa el workflow para publicar en GHCR (`packages: write`); no hay que crearlo.
+**No se necesitan secretos**: el despliegue no usa SSH.
 
 ### Configuración de GHCR
 
 - La imagen se publica como `ghcr.io/<org>/<repo>:<sha>`.
-- Para que el **servidor** pueda descargar la imagen, se hace un `docker login ghcr.io` **una vez**
-  con un token de solo lectura de paquetes (`read:packages`). No se pasa ningún token por la línea de
-  comandos del workflow.
-- Si el paquete es privado, mantener el login persistente en el servidor.
+- El paquete es **público**, así el servidor la descarga sin `docker login`.
 
 ### Requisitos del servidor
 
 - Docker Engine + Docker Compose v2 (`docker compose`).
-- Usuario de despliegue **con permisos limitados** (no root). Grupo `docker` o Docker rootless.
-- Directorio de producción **independiente** del de desarrollo (por convención `AGENTS.md`: `/opt/apps/<proyecto>`).
-- `docker login ghcr.io` realizado una vez (ver arriba).
-- Clave pública de despliegue en `~/.ssh/authorized_keys` del usuario de despliegue.
-
-### Acceso SSH
-
-1. Generar una clave dedicada de despliegue: `ssh-keygen -t ed25519 -f hapmed_deploy`.
-2. Añadir `hapmed_deploy.pub` a `authorized_keys` del usuario de despliegue.
-3. Guardar la privada como secreto `SSH_KEY`.
-4. Guardar la huella del servidor: `ssh-keyscan -p <puerto> <host> >> known_hosts` y su contenido en
-   `SSH_KNOWN_HOSTS` (nunca usar `StrictHostKeyChecking=no`).
+- Runner self-hosted (etiqueta `hapmed`) con acceso a Docker y a `/opt/apps/hapmed-web`.
+- Directorio de producción `/opt/apps/hapmed-web` (propiedad del usuario del runner).
+- Puerto publicado solo en `127.0.0.1`; la exposición pública la realiza Cloudflare Tunnel.
 
 ### Directorio de producción
 
@@ -189,9 +175,9 @@ La configuración específica del servidor se pone en `.env` o se exporta al inv
 | Síntoma | Causa probable | Acción |
 | --- | --- | --- |
 | `validate` falla | Falta un archivo o HTML inválido | Revisar el log del step; ejecutar `node tools/validate-site.js site` en local |
-| `Permission denied` en SSH | Clave/host mal configurados | Verificar `SSH_KEY`, `SSH_USER`, `SSH_KNOWN_HOSTS`, `SSH_PORT` |
-| `denied` al hacer push a GHCR | Permisos insuficientes | El job necesita `packages: write` (ya definido) |
-| `pull access denied` en el servidor | El servidor no ha hecho `docker login ghcr.io` | Hacer login una vez (ver GHCR) |
+| `deploy` no arranca | `ENABLE_DEPLOY` no es `true`, o el runner está offline | Ver el runner en Settings → Actions → Runners |
+| Runner offline | El servicio del runner está caído | `systemctl status actions.runner.*` en el servidor |
+| `permission denied` al desplegar | El usuario del runner no es dueño de `/opt/apps/hapmed-web` o no está en `docker` | Ajustar propietario/grupo |
 | Healthcheck no `healthy` | Imagen rota o puerto ocupado | Revisar `docker compose logs`; el script intenta rollback |
 
 ### Verificación del despliegue

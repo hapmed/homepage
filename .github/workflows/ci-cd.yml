@@ -105,7 +105,7 @@ jobs:
     name: Desplegar
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DEPLOY == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hapmed]
     environment:
       name: production
     concurrency:
@@ -115,46 +115,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configurar SSH
-        env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+      - name: Sincronizar artefactos de despliegue
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          install -m 644 deploy/compose.prod.yaml /opt/apps/hapmed-web/compose.prod.yaml
+          install -m 755 deploy/deploy.sh /opt/apps/hapmed-web/deploy.sh
 
-      - name: Enviar artefactos de despliegue
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      - name: Desplegar
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_PATH'"
-          scp -i ~/.ssh/id_deploy -P "$SSH_PORT" deploy/deploy.sh deploy/compose.prod.yaml "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
-
-      - name: Ejecutar despliegue remoto
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          IMAGE_REF: ${{ env.IMAGE }}:${{ github.sha }}
-        run: |
-          set -euo pipefail
-          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
-            "cd '$DEPLOY_PATH' && IMAGE_REF='$IMAGE_REF' bash deploy.sh"
+          cd /opt/apps/hapmed-web
+          HAPMED_PORT=8080 IMAGE_REF="${{ env.IMAGE }}:${{ github.sha }}" bash deploy.sh
 
       - name: Resumen
         if: always()
         run: |
           {
-            echo "### Despliegue HAPMED Web"
+            echo "### Despliegue HAPMED Web (homelab)"
             echo "- Commit: \`${{ github.sha }}\`"
             echo "- Imagen: \`${{ env.IMAGE }}:${{ github.sha }}\`"
             echo "- Resultado: ${{ job.status }}"
